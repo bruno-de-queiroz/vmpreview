@@ -1,0 +1,65 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+    <title>Depósito pago com valor superior</title>
+  </head>
+
+  <body><font face="Arial" size="2">
+    <!-- Depósito pago com valor superior -->
+    <table cellpadding="0" cellspacing="0" align="center" width="550" summary="">
+      <thead>
+	#if("$!userRegistered" == "true")
+		#parse("/includes/pagseguro/header_reg_user.inc")
+	#else
+		#parse("/includes/pagseguro/header_unreg_user.inc")
+	#end
+      </thead>
+      <tbody>
+	<tr>
+	  <td>
+	    <p><font color="#449C38" face="arial" size="+1"><b>Olá ${userName},</b></font></p>
+	    #if($!donation)
+		<p><font face="arial" size="2">Pagamento concluído: Seu pagamento para ${creditorNickname} foi aprovado. O valor pago por depósito R$ ${paymentValue} foi superior ao valor total de R$ ${transactionValue}.</font></p>
+	    #else
+		<p><font face="arial" size="2">Doação concluída: A doação para ${creditorName} foi aprovada. O valor pago por depósito bancário (R$ ${paymentValue}) foi superior ao valor total de R$ ${transactionValue}.</font></p>
+	    #end
+	    <p><font face="arial" size="2">Seu dinheiro bem guardado: O saldo de R$ ${paymentAvailableValue} está disponível em sua conta no PagSeguro. Ele pode ser usado para pagamentos online ou ser creditado na sua conta bancária.</font></p>
+	#if("$!canOpenDispute" == "true")
+		<p><font face="arial" size="2">Segurança: O PagSeguro garante a você formas legais de receber seu dinheiro de volta em até 14 dias após a confirmação do pagamento, caso o pedido não seja entregue corretamente. Para isso, acesse "Minha conta" > "Detalhes da Transação" > "Iniciar disputa".</font></p>
+	#end
+	  </td>
+	</tr>
+	#parse("/includes/pagseguro/debtor_trans_details.inc")
+	#parse("/includes/pagseguro/shopping_cart_itens.inc")
+	#if("$!canOpenDispute" == "false")
+	<tr><td><br /></td></tr>
+	<tr>
+	  <td bgcolor="#fdf9ec">
+		<font face="arial" size="-1">
+		<img src="https://p.simg.uol.com.br/out/pagseguro/i/email/alert.gif" width="23" height="21" alt="" style="margin-right:5px;vertical-align:middle" />
+		A garantia de devolução do pagamento oferecida pelo PagSeguro não se aplica a esta transação. Você não poderá abrir uma <a href="https://pagseguro.uol.com.br/para_voce/como_funciona_a_disputa.jhtml">disputa</a>.
+		</font>
+	  </td>
+	</tr>
+	#end
+	#if($!userRegistered)
+		<tr>
+		  <td>
+			<p><font face="arial" size="2">Veja os detalhes: As informações sobre esta transação estão <a href="${userRegistrationURL}">disponíveis na área "Minha Conta" no site PagSeguro.</a></font></p>
+		  </td>
+		</tr>
+		#parse("/includes/pagseguro/footer_reg_user.inc")
+	#else
+		<tr>
+		  <td>
+			<p><font face="arial" size="2">Facilite sua vida: PagSeguro é a melhor maneira de fazer pagamentos e receber valores na internet com a segurança dos seus dados garantida. <a href="${userRegistrationURL}">Aproveite para criar sua conta</a> usando o e-mail ${userEmail}.</font></p>
+		  </td>
+		</tr>
+		#parse("/includes/pagseguro/footer_unreg_user.inc")
+	#end	
+      </tbody>
+    </table>	  
+    <!-- M16 -->
+  </font></body>
+</html>
