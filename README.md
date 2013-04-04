@@ -2,6 +2,8 @@
 
 <p>A <strong>Node.js</strong> interpreter for <strong>Velocity Macros</strong> (.vm) files.</p>
 
+<p>vmPreview uses <strong>iconv</strong>, so before running please use 'npm install' to install all dependencies</p>
+
 <hr/>
 
 <p>At this time, the .js just wrap all dependencies in one file, without any Velocity language processing (i.e. if, loops, vars).</p>
