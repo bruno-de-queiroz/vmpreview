@@ -1,3 +1,11 @@
 *.html
-./processed
-./data
+*.log
+
+processed/
+data/
+pids
+logs
+results
+node_modules/
+
+npm-debug.log
