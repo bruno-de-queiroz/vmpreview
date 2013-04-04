@@ -1,1 +1,3 @@
 *.html
+./processed
+./data
