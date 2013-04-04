@@ -6,6 +6,7 @@
 
 // Requires
 var	fs = require('fs')
+	, config = require("./config")
 	, Buffer = require("buffer").Buffer
 	, Iconv = require("iconv").Iconv;
 
@@ -18,9 +19,9 @@ function log(msg){
 
 // VAR
 var		args = process.argv.slice(2)
-	,	workspace = "/home/bruno/workspace/jaiminho"
-	,	datapath = "./data"
-	,	savepath = "./processed"
+	,	workspace = config.workspace
+	,	datapath = config.datapath || "./data"
+	,	savepath = config.savepath || "./processed"
 	,	encode = "utf-8" // Encode
 	,	regLinha = /[^\r\n]+/g // Strip das linhas
 	,	regFile = /(.*)\/([\w-_]+)\.vm$/
