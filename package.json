@@ -1,0 +1,10 @@
+{
+        "name": "VmPreview",
+        "description": "Velocity Render Tool",
+        "version": "0.0.1",
+        "private": "true",
+        "author": "Jorge Feldmann<jfeldmann@gmail.com>, Bruno de Queiroz <creativelikeadog@gmail.com>",
+        "dependencies": {
+		"iconv" : "latest"
+	}
+}
