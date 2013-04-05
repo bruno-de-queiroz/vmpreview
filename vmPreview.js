@@ -22,30 +22,28 @@ var		args = process.argv.slice(2)
 	,	workspace = config.workspace
 	,	datapath = config.datapath || "./data"
 	,	savepath = config.savepath || "./processed"
-	,	encode = "utf-8" // Encode
+	,	encoding = config.defaults.encoding || "utf-8" // Encode
+	,	defaults = config.data || {}
+	,	data = {}
 	,	regLinha = /[^\r\n]+/g // Strip das linhas
 	,	regFile = /(.*)\/([\w-_]+)\.vm$/
 	,	regParse = /#parse\(\"(.*)\"/ // Strip dos comandos #parse
 	, 	regVariables = /\!?\$\{?\!?([\w]+)\}?/g
+	,	regSingleExistStatement = /\#if\s?\(\s?(?:\'|\")?\$\!?\{?([\w-_.\d]+)\}?(?:\'|\")?\)/g
 	, 	regGroupStatement = /\"?\!?\$\{?\!?([\w]+)\}?\"?\s?([\=]{2}|\!\=|[\&]{2}|[\|]{2})\s?\"?\!?\$\{?\!?([\w]+)\}?\"?/g
 	,	regSingleStatement = /\"?\!?\$\{?\!?([\w]+)\}?\"?\s?([\=]{2}|\!\=|[\&]{2}|[\|]{2})\s?\"([\w]+)\"?\s?([\&]{2}|[\|]{2})?/g
 	,	regSetStatement = /\"?\!?\$\{?\!?([\w]+)\}?\"?\s?(\=)\s?(\'(.*)\'|\"(.*)\"|(.*))?\s?\)/g
+	,	regCleanIfStatement = /(\#if\s?\(.*\)([^\#]+)\#(else.*|end))/g
+	,	regCleanElseStatement = /(\#if\s?\(.*\).*\#else([^\#]+)\#end)/g
 	,	regLogic = /\#([\w\(\$\{\}\&\|\!\=\s\'\"\.\-\_]+)\)|\#(end|else)/g
-	,	regLogicSET = /\#set\((.*)([\s]+([\=]{2}|\!\=)[\s]+(.*))?\)/g
-	,	regLogicIF = /\#if\((.*)([\s]+([\=]{2}|\!\=)[\s]+(.*))?\)/g
+	,	regLogicSET = /\#set\s?\(\$([^\s\=]+)\s?\=\s?(?:\'|\")?([a-zA-Z0-9\.\/\:-_]+)(?:\'|\")?\s?\)/g
+	,	regLogicIF = /\#if\s?\(\"?\'?\s?\!?\$\{?\!?(.*)\}?([\s]+([\=]{2}|\!\=)[\s]+(.*))?\"?\'?\s?\)/g
 	,	regLogicELSE = /\#else(.*)/g
-	,	regLogicELIF = /\#elseif\((.*)([\s]+([\=]{2}|\!\=)[\s]+(.*))?\)/g
+	,	regLogicELIF = /\#elseif\s?\(\"?\'?\s?\!?\$\{?\!?(.*)\}?([\s]+([\=]{2}|\!\=)[\s]+(.*))?\"?\'?\s?\)/g
 	,	regLogicEND = /\#end(.*)/g
 	,	file = []
 	,	fileCount = 1
 	,	finalCode = ""
-	, 	alwaysFirstCase = true
-	,	defaults = {
-			'userName': 'Bruno de Queiroz'
-			, 'userEmail' : 'cad_bsilva@uolinc.com'
-			, 'cartItensData' : '<td><font  face="arial" size="2">Teste</font></td><td><font  face="arial" size="2">R$ 1.000,00</font></td>'
-	}
-	,	data = {}
 
 fs.exists(savepath, function (exists) {
 	if(!exists)
@@ -67,7 +65,7 @@ var fileAnalysis = (function(){
 	}
 
 	var processVariables = function(string,array){
-		//log("Processing Variables");
+		log("Processing Variables");
 		for(var i=0,j=array.length;i<j;i++){
 			var key = array[i].replace(/\{\!?(.*)\}/g,"$1");
 			if(data.hasOwnProperty(key)){
@@ -77,57 +75,70 @@ var fileAnalysis = (function(){
 		return string;
 	}
 
+	var getVariableInfo = function(string){
+
+		var obj = {
+			exists: data.hasOwnProperty(string)
+			, value: data.hasOwnProperty(string) ? data[string] == "true" || data[string] == "false" ? Boolean(data[string]) : data[string] : false
+			, type : data.hasOwnProperty(string) ? data[string] == "true" || data[string] == "false" ? "boolean" : typeof data[string] : undefined
+		}
+		return obj;
+	}
+
 	var processLogic = function(line){
 		//log("Processing IF");
 
-		var matches = line.match(regVariables)
-			, variables = []
-			, _return;
+		var variables = line.match(regVariables)
+			, statement = line.replace(regCleanIfStatement,"$1")
+			, existStatement
+			, singleStatement
+			, groupedStatment
+			, results = []
+			, result = false;
 
+		while(groupedStatment = regGroupStatement.exec(statement)){
+			var o = groupedStatment[2]
+				, infoA = getVariableInfo(groupedStatment[1])
+				, infoB = getVariableInfo(groupedStatment[3])
+				, a = o != "&&" && o != "||" ? infoA.value : infoA.type == "boolean" ? (infoA.exists && infoA.value == true) : infoA.exists
+				, b = o != "&&" && o != "||" ? infoB.value : infoB.type == "boolean" ? (infoB.exists && infoA.value == true) : infoB.exists
+				, r = eval(a + o + b);
 
-		if(matches && matches.length == 1){
-
-			var a = matches[0].replace(/[\$\{\}\!]/g,"");
-
-			eval("_return = "+ data.hasOwnProperty(a));
-
-			//log("Results of: " + a + " exists ? : " + _return);
-
-		} else {
-			var groupStatement,
-				singleStatement,
-				_returnArray = [];
-
-			while( groupStatement = regGroupStatement.exec(line) ){
-				var g = groupStatement
-					, a = data[g[1]] || false
-					, b = g[2]
-					, c = data[g[3]] || false
-					, result = eval(" "+a+" "+b+" "+c);
-
-				log("Results of: " + g[1] + " "+ b + " " + g[3] + " : " + result);
-
-				_returnArray.push(result);
-			}
-
-			while( singleStatement = regSingleStatement.exec(line) ){
-				var g = singleStatement
-					, a = data[g[1]] || false
-					, b = g[2]
-					, c = g[3]
-					, result = eval(" "+a+" "+b+" '"+c+"'");
-
-				//log("Results of: " + g[1] + " "+ b + " '" + g[3] + "'' : " + result);
-				_returnArray.push(result);
-			}
-
-			eval("_return = "+ _returnArray.join(" && "));
-
-			//log("Results of: "+ _returnArray.join(" && ") + " : " + _return);
-
+			results.push(r);
 		}
 
-		return _return;
+		while(singleStatement = regSingleStatement.exec(statement)){
+			var o = singleStatement[2]
+				, infoA = getVariableInfo(singleStatement[1])
+				, a = infoA.exists ? infoA.type == "string" ? "'"+infoA.value+"'" : infoA.value : false
+				, b = singleStatement[3] != "true" && singleStatement[3] != "false" ? "'"+singleStatement[3]+"'" : singleStatement[3]
+				, r = eval(a + o + b);
+
+			results.push(r);
+		}
+
+		while(existStatement = regSingleExistStatement.exec(statement)){
+			var r = data.hasOwnProperty(existStatement[1]);
+
+			results.push(r);
+		}
+
+		result = eval(results.join("&&"));
+		return result;
+	}
+
+	var processInlineLogic = function(line){
+		var logicResults = processLogic(line);
+		if(logicResults){
+			line = line.replace(regCleanIfStatement,"$2");
+		} else {
+			if(regLogicELSE.test(line)){
+				line = line.replace(regCleanElseStatment,"$2");
+			} else {
+				line = line.replace(regCleanIfStatement,"");
+			}
+		}
+		return line;
 	}
 
 	var extendArray = function(a,b){
@@ -147,7 +158,7 @@ var fileAnalysis = (function(){
 
 	var readFile = function(path,filename,callback) {
 		var file = ""
-			, iconv = new Iconv('ISO-8859-1', 'UTF-8')
+			, iconv = new Iconv(encoding, 'UTF-8')
 			, buffer = iconv.convert(fs.readFileSync(path)).toString("utf8")
 			, variables = []
 			, print = true;
@@ -173,34 +184,41 @@ var fileAnalysis = (function(){
 				file += readFile(url);
 			} else {
 
+				//log("isInline: "+ (regLogicIF.test(line) && regLogicEND.test(line)));
 				if(regLogicIF.test(line)){
-					print = processLogic(line);
-				} else if(regLogicEND.test(line))
-					print = true;
-
-				if(regLogicELSE.test(line))
+					if(!regLogicEND.test(line)){
+						log("IF logic: " + line.replace(/[\s\t]/g,""));
+						print = processLogic(line);
+					} else {
+						log("Inline logic: " + line.replace(/[\s\t]/g,""));
+						line = processInlineLogic(line);
+						print = true;
+					}
+				} else if(regLogicELSE.test(line)) {
+					log("ELSE logic: " + line.replace(/[\s\t]/g,""));
 					print = !print;
-
-
+					log("PRINT LINE: "+print);
+				} else if(regLogicEND.test(line)) {
+					log("END logic");
+					print = true;
+				}
 
 				if(print){
 
-					var lineVars;
+					var lineVars,
+						setStatement;
 
 					while(lineVars = regVariables.exec(line)){
 						variables.push(lineVars[1]);
 					}
 
-					var setStatement = regLogicSET.test(line);
-
-					if(setStatement){
-						var matchs;
-						while( matchs = regSetStatement.exec(line) ){
-							data[matchs[1]] = matchs[4] || matchs[3];
-						}
-
-						line = line.replace(regLogicSET,"");
+					while(setStatement = regLogicSET.exec(line)){
+						log("Saving Var "+ setStatement[1] + ":" + setStatement[2]);
+						data[setStatement[1]] = setStatement[2];
 					}
+
+					line = line.replace(regLogicSET,"");
+
 					file += line.replace(regLogic,"").replace(regVariables,"$1") + "\n";
 				}
 			}
@@ -208,15 +226,16 @@ var fileAnalysis = (function(){
 
 		file = processVariables(file,variables);
 
-		if(callback)
+		if(callback) {
 			callback(file);
+		}
 
 		return file;
 	}
 
 	var writeFile = function(fileName,fileContent){
 		var buffer = new Buffer(fileContent)
-			, iconv = new Iconv('UTF-8', 'ISO-8859-1')
+			, iconv = new Iconv('UTF-8', encoding)
 			, text = iconv.convert(buffer)
 			, file = savepath+"/"+fileName+".html";
 
