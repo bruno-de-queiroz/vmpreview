@@ -37,10 +37,12 @@ var		args = process.argv.slice(2)
 	,	regCleanElseStatement = /(\#if\s?\(.*\).*\#else([^\#]+)\#end)/g
 	,	regLogic = /\#([\w\(\$\{\}\&\|\!\=\s\'\"\.\-\_]+)\)|\#(end|else)/g
 	,	regLogicSET = /\#set\s?\(\$([^\s\=]+)\s?\=\s?(?:\'|\")?([a-zA-Z0-9\.\/\:-_]+)(?:\'|\")?\s?\)/g
+	,	regLogicSETVARS = /\#set\s?\(\s?\$([\w]+)\s?\=\s?\"?\$(.*)\s?\)/g
 	,	regLogicIF = /\#if\s?\(\"?\'?\s?\!?\$\{?\!?(.*)\}?([\s]+([\=]{2}|\!\=)[\s]+(.*))?\"?\'?\s?\)/g
 	,	regLogicELSE = /\#else(.*)/g
 	,	regLogicELIF = /\#elseif\s?\(\"?\'?\s?\!?\$\{?\!?(.*)\}?([\s]+([\=]{2}|\!\=)[\s]+(.*))?\"?\'?\s?\)/g
 	,	regLogicEND = /\#end(.*)/g
+	,	regLogicFOREACH = /\#foreach\s?\(\s?\$([\w]+)\sin\s\$([\w\.\(\)]+)\)/g
 	,	file = []
 	,	fileCount = 1
 	,	finalCode = ""
@@ -83,6 +85,61 @@ var fileAnalysis = (function(){
 			, type : data.hasOwnProperty(string) ? data[string] == "true" || data[string] == "false" ? "boolean" : typeof data[string] : undefined
 		}
 		return obj;
+	}
+
+	var printLogic = function(d, line , variables, output){
+		var lineVars,
+			setStatement,
+			setStatementVar;
+
+		while(lineVars = regVariables.exec(line)){
+			variables.push(lineVars[1]);
+		}
+
+		while(setStatement = regLogicSET.exec(line)){
+			log("Saving Var "+ setStatement[1] + ":" + setStatement[2]);
+			d[setStatement[1]] = setStatement[2];
+		}
+
+		while(setStatementVar = regLogicSETVARS.exec(line)){
+			log("Saving Var "+ setStatementVar[1] + ":" + setStatementVar[2]);
+			d[setStatementVar[1]] = eval("d."+setStatementVar[2].replace(/\.get\(([\w\d]+)\)/g,"[$1]"));
+		}
+
+		line = line.replace(regLogicSET,"");
+
+		line = line.replace(regLogicSETVARS,"");
+
+		output += line.replace(regLogic,"").replace(regVariables,"$1") + "\n";
+
+		return output;
+	}
+
+	var processForeachLogic = function( file, block ){
+		if(!/\#\#\#\#foreach/g.test(file)){
+			return;
+		} else {
+			var variables = regLogicFOREACH.exec(block),
+				item = variables[1],
+				list = getVariableInfo(variables[2]).value,
+				tmpData = {},
+				variables = [],
+				newBlock = "";
+
+			block = block.replace(regLogicFOREACH,"").replace(/[\t]+/g,"\n").split("\n");
+
+			for( var i=0,j=list.length; i<j; i++){
+				var object = list[i];
+				data[item] = object;
+				for(var k=0,l=block.length;k<l;k++)
+					newBlock = printLogic( data, block[k], variables, newBlock );
+
+				newBlock = processVariables(newBlock,variables);
+			}
+
+			return newBlock;
+		}
+
 	}
 
 	var processLogic = function(line){
@@ -161,7 +218,9 @@ var fileAnalysis = (function(){
 			, iconv = new Iconv(encoding, 'UTF-8')
 			, buffer = iconv.convert(fs.readFileSync(path)).toString("utf8")
 			, variables = []
-			, print = true;
+			, print = true
+			, foreachLines = false
+			, foreachBlock = "";
 
 		if(filename){
 			try {
@@ -198,29 +257,26 @@ var fileAnalysis = (function(){
 					log("ELSE logic: " + line.replace(/[\s\t]/g,""));
 					print = !print;
 					log("PRINT LINE: "+print);
+				} else if(regLogicFOREACH.test(line)) {
+					log("FOREACH logic: " + line.replace(/[\s\t]/g,""));
+					file += "####foreach";
+					foreachLines = true;
+					print = false;
 				} else if(regLogicEND.test(line)) {
 					log("END logic");
 					print = true;
+					foreachLines = false;
+					file += processForeachLogic( file, foreachBlock );
+					file = file.replace(/\#\#\#\#foreach/g,"")
 				}
 
-				if(print){
+				if(print)
+					file = printLogic(data, line, variables, file );
 
-					var lineVars,
-						setStatement;
-
-					while(lineVars = regVariables.exec(line)){
-						variables.push(lineVars[1]);
-					}
-
-					while(setStatement = regLogicSET.exec(line)){
-						log("Saving Var "+ setStatement[1] + ":" + setStatement[2]);
-						data[setStatement[1]] = setStatement[2];
-					}
-
-					line = line.replace(regLogicSET,"");
-
-					file += line.replace(regLogic,"").replace(regVariables,"$1") + "\n";
+				if(foreachLines){
+					foreachBlock += line;
 				}
+
 			}
 		});
 
