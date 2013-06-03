@@ -30,7 +30,7 @@ var		args = process.argv.slice(2)
 	,	regParse = /#parse\(\"(.*)\"/ // Strip dos comandos #parse
 	, 	regVariables = /\!?\$\{?\!?([\w]+)\}?/g
 	,	regSingleExistStatement = /\#if\s?\(\s?(?:\'|\")?\$\!?\{?([\w-_.\d]+)\}?(?:\'|\")?\)/g
-	, 	regGroupStatement = /\"?\!?\$\{?\!?([\w]+)\}?\"?\s?([\=]{2}|\!\=|[\&]{2}|[\|]{2})\s?\"?\!?\$\{?\!?([\w]+)\}?\"?/g
+	, 	regGroupStatement = /\(?\"?(\!)?\$\!?\{?(\w+)\}?\s(\|{2}|\&{2})\s?\"?(\!)?\$\!?\{?(\w+)\}?\)?/g
 	,	regSingleStatement = /\"?\!?\$\{?\!?([\w]+)\}?\"?\s?([\=]{2}|\!\=|[\&]{2}|[\|]{2})\s?\"([\w]+)\"?\s?([\&]{2}|[\|]{2})?/g
 	,	regSetStatement = /\"?\!?\$\{?\!?([\w]+)\}?\"?\s?(\=)\s?(\'(.*)\'|\"(.*)\"|(.*))?\s?\)/g
 	,	regCleanIfStatement = /(\#if\s?\(.*\)([^\#]+)\#(else.*|end))/g
@@ -38,7 +38,7 @@ var		args = process.argv.slice(2)
 	,	regLogic = /\#([\w\(\$\{\}\&\|\!\=\s\'\"\.\-\_]+)\)|\#(end|else)/g
 	,	regLogicSET = /\#set\s?\(\$([^\s\=]+)\s?\=\s?(?:\'|\")?([a-zA-Z0-9\.\/\:-_]+)(?:\'|\")?\s?\)/g
 	,	regLogicSETVARS = /\#set\s?\(\s?\$([\w]+)\s?\=\s?\"?\$(.*)\s?\)/g
-	,	regLogicIF = /\#if\s?\(\"?\'?\s?\!?\$\{?\!?(.*)\}?([\s]+([\=]{2}|\!\=)[\s]+(.*))?\"?\'?\s?\)/g
+	,	regLogicIF = /\#if\s?\(\(?\"?\'?\s?\!?\$\{?\!?(.*)\}?([\s]+([\=]{2}|\!\=)[\s]+(.*))?\"?\'?\s?\)?\)/g
 	,	regLogicELSE = /\#else(.*)/g
 	,	regLogicELIF = /\#elseif\s?\(\"?\'?\s?\!?\$\{?\!?(.*)\}?([\s]+([\=]{2}|\!\=)[\s]+(.*))?\"?\'?\s?\)/g
 	,	regLogicEND = /\#end(.*)/g
@@ -154,13 +154,12 @@ var fileAnalysis = (function(){
 			, result = false;
 
 		while(groupedStatment = regGroupStatement.exec(statement)){
-			var o = groupedStatment[2]
-				, infoA = getVariableInfo(groupedStatment[1])
-				, infoB = getVariableInfo(groupedStatment[3])
+			var o = groupedStatment[3]
+				, infoA = getVariableInfo(groupedStatment[1]+groupedStatment[2])
+				, infoB = getVariableInfo(groupedStatment[4]+groupedStatment[5])
 				, a = o != "&&" && o != "||" ? infoA.value : infoA.type == "boolean" ? (infoA.exists && infoA.value == true) : infoA.exists
 				, b = o != "&&" && o != "||" ? infoB.value : infoB.type == "boolean" ? (infoB.exists && infoA.value == true) : infoB.exists
 				, r = eval(a + o + b);
-
 			results.push(r);
 		}
 
@@ -179,7 +178,6 @@ var fileAnalysis = (function(){
 
 			results.push(r);
 		}
-
 		result = eval(results.join("&&"));
 		return result;
 	}
