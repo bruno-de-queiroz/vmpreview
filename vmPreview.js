@@ -238,7 +238,7 @@ var fileAnalysis = (function(){
 
 		buffer.split("\n").forEach(function(line) {
 
-			if(isFilePath(line)){
+			if(isFilePath(line) && print == true ){
 				var url = genFilePath(line);
 				file += readFile(url);
 			} else {
