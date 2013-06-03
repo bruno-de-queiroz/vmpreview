@@ -5,13 +5,16 @@
 <p>vmPreview uses <strong>iconv</strong>, so before running please use 'npm install' to install all dependencies</p>
 
 <hr/>
-
-<p>At this time, the .js just wrap all dependencies in one file, without any Velocity language processing (i.e. if, loops, vars).</p>
-
+<p>Current</p>
+<ol>
+	<li>#if #else #end inline and block logic</li>
+	<li>#foreach logic</li>
+	<li>#set</li>
+	<li>#parse</li>
+<ol>
+<br/>
 <p>Next steps:</p>
 
 <ol>
-<li>#Variables: match and processing</li>
-<li>#If: statement processing</li>
-<li>#ForEach: statement processing</li>
+<li>#Java Primitives to Javascript Primitives</li>
 </ol>
