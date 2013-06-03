@@ -117,7 +117,7 @@ var fileAnalysis = (function(){
 
 	var processForeachLogic = function( file, block ){
 		if(!/\#\#\#\#foreach/g.test(file)){
-			return;
+			return "";
 		} else {
 			var variables = regLogicFOREACH.exec(block),
 				item = variables[1],
